@@ -1,5 +1,3 @@
-import sys
-import time
 from geolocator import Geolocator
 from params_manager import *
 from model_manager import *
@@ -42,28 +40,18 @@ def lambda_handler(event, context):
     keys = params_full_list.pop("keys")
     # services to call
     for service_id in keys:
-        t0 = time.time()
         model = schemas.get(service_id)
         schema = model.get_schema()
         # Adjust the parameters to the service's schema
-        t1 = time.time()
         url = assemble_url(schema, params_full_list.copy())
         # At this point the query must be complete
-        t2 = time.time()
         service_load= url_request(url)
         # At this point is where the 'out' part of each model applies
-        t3 = time.time()
         items = items_from_service(service_id,
                                    model,
                                    schema_items,
                                    schema_required,
                                    service_load)
-        t4 = time.time()
-        print(f"main-Get schema: {((t1-t0)*1000):.3f}")
-        print(f"main-build url: {((t2-t1)*1000):.3f}")
-        print(f"main-url request: {((t3-t2)*1000):.3f}")
-        print(f"main-call items for service: {((t4-t3)*1000):.3f}")
-        print("*** All the times are in miliseconds ***")
         loads.extend(items)
 
     return loads

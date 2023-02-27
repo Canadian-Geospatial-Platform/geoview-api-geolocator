@@ -4,11 +4,6 @@ import asyncio
 from url_methods import *
 from constants import *
 
-tt101 = 0.0
-tt102 = 0.0
-tt103 = 0.0
-tt104 = 0.0
-
 def get_from_schema(schema, item):
     """
     Get the data value asociated with an specific field from a data item
@@ -93,7 +88,7 @@ def get_function_from_schema(schema, item):
     if field == "":
         return function_null
     if not lookup:
-        return get_from_schema        
+        return get_from_schema
     else:
         schema_type = lookup.get("type")
         if schema_type == "table":
@@ -313,17 +308,10 @@ def items_from_service(service, model, schema_items, schema_required, load):
 
     Return: A set of output items standarized and validated
     """
-    global tt101
-    global tt102
-    global tt103
-    global tt104
-
-    t10 = time.time()
     list_to_process = []
     loads = []
     schema = model.get_schema()
     schema_layer, data_layer = get_data_layer(schema, load)
-    t11 = time.time()
     # Identify the process by field
     if len(data_layer) > 0:
         functions_by_field = get_functions(schema_layer, data_layer[0])
@@ -335,17 +323,8 @@ def items_from_service(service, model, schema_items, schema_required, load):
                                      data_item))
             # Add the item to the list for the next process
             list_to_process.append((schema_items, schema_required, item))
-        print(f"adapt to model-start: {(tt101*1000):.3f}")
-        print(f"adapt to model-for key: {(tt102*1000):.3f}")
-        print(f"adapt to model-await: {(tt103*1000):.3f}")
-        print(f"adapt to model-output item: {(tt104*1000):.3f}")
-        t12 = time.time()
         num =len(list_to_process)
         # Apply the 'generic' out-api-schema to the item
         with lambda_multiprocessing.Pool(num) as process:
             loads = process.map(apply_out_schema, list_to_process)
-        t13 = time.time()
-        print(f"items from service-before for: {((t11-t10)*1000):.3f}")
-        print(f"items from service-after for: {((t12-t11)*100):.3f}")
-        print(f"items from service-after process: {((t13-t12)*1000):.3f}")
     return loads
