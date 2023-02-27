@@ -12,7 +12,7 @@ SET method=GET
 SET ampers=^&
 SET q=%1
 SET lang=en
-SET keys=geonames
+SET keys=nts
 SET filename=%keys%_log.log
 ECHO Service-%keys% >> %filename%
 ECHO Query: %q% >> %filename%
@@ -44,7 +44,7 @@ ECHO completed %max% calls
 REM ===========================================================================
 REM ===================== Loop 2 to call the service url ======================
 REM ===========================================================================
-SET urlService=https://geogratis.gc.ca/services/geoname/%lang%/geonames.json?
+SET urlService=https://geogratis.gc.ca/services/delimitation/%lang%/nts?
 SET command=%curl_command% "%urlService%q=%q%%ampers%lang=%lang%"
 echo %command%
 ECHO Start %keys% service time-%Time% >> %filename%

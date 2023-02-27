@@ -8,7 +8,7 @@ def get_from_field(field, item):
     Params:
       field: The field name
       item: the data record
-    Returns:
+    Return:
         The field value from the record if the field exists in the data item.
     """
     if field is None or field not in item:
@@ -22,7 +22,7 @@ def get_url_from_field(schema, data):
     Params:
       schema: The schema with the path to get access to the url
       data: the data structure where the url can be found
-    Returns: the field value asociated with
+    Return: the field value asociated with
     """
     field = schema.get("field")
     url = schema.get("lookup").get("url")
@@ -41,7 +41,7 @@ def get_from_url(schema, data):
     Params:
       schema: The schema defintion to access to the url
       data: the data structure where the url can be found
-    Returns: from a valid REST response, extracts the value from the asociated
+    Return: from a valid REST response, extracts the value from the asociated
              attribute.
     """
     field = schema.get("lookup").get("field")
@@ -51,7 +51,7 @@ def get_from_url(schema, data):
 
 def replace_url_with_params(url, params, params_list):
     """
-    Replace and returns the parameters embedded in the url with a valid set
+    Replace and Return the parameters embedded in the url with a valid set
     of values
 
     Params:
@@ -59,7 +59,7 @@ def replace_url_with_params(url, params, params_list):
       params: The list of parameters to be replace in the url
       params_list: The list of query parameters where to search for the
                    replacent to params
-    Returns: The url whit the original parameters are replaced with the
+    Return: The url whit the original parameters are replaced with the
              asociated values.
     """
     for param in params:
@@ -76,7 +76,7 @@ def assemble_url(model, params):
       model: The model with the rules to assemble the url and parameters
       params: The list of parameters to be used to build the url
 
-    Returns: The assembled url including parameters as is required by the
+    Return: The assembled url including parameters as is required by the
              service model.
     """
     # 1. Extract url and parameters from json
@@ -107,7 +107,7 @@ def assemble_url(model, params):
         url += "&".join(qry_params_list)
 
     return url
-
+import time
 def url_request(url):
     """
     Calls a REST service passing the url
@@ -115,12 +115,12 @@ def url_request(url):
     Params:
       url: The url for the REST call
 
-    Returns: The response from the call.
+    Return: The response from the call.
     """
     query_response =urllib.request.urlopen(urllib.request.Request(
         url=url,
         method='GET'),
         timeout=5)
     response = query_response.read()
-
-    return json.loads(response)
+    json_response = json.loads(response)
+    return json_response

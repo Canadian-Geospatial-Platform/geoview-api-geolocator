@@ -5,7 +5,7 @@ def get_s3_bucket():
     """
     Get the name of the bucket
 
-    Returns: The name of the bucket in S3
+    Return: The name of the bucket in S3
            # This name is just for developping and testing purposes
     """
     return "dev-app-geolocator"
@@ -19,7 +19,7 @@ def get_objects(bucket_name):
 
     Param:
       bucket_name: The name of the bucket to read from
-    Returns: List of objects in the bucket
+    Return: List of objects in the bucket
     """
     list_obj = []
     try:
@@ -40,7 +40,7 @@ def get_schemas_paths(bucket_name):
 
     Param:
       bucket_name: The name of the bucket to read from
-    Returns: The paths to the objects in the bucket
+    Return: The paths to the objects in the bucket
     """
     apis, services = {}, {}
     api_starts = 'api/'
@@ -59,7 +59,7 @@ def get_schemas_paths(bucket_name):
                 key = get_substring(item, service_starts, ends)
                 services[key] = item
             else:
-                raise Exception("unknown item in bucket: "+ item)
+                raise Exception(ERR_UNKNOWN_ITEM_IN_BUCKET + item)
 
     paths = {
         APIS: apis,
@@ -76,7 +76,7 @@ def read_file(bucket, filename):
       bucket: The name of the bucket to read from
       filename: the path to the object
 
-    Returns: The content of the object as string
+    Return: The content of the object as string
     """
     s3 = boto3.resource('s3')
     try:

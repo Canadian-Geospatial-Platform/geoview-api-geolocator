@@ -11,7 +11,7 @@ class Schema:
     Params:
       object: Required to create the instance
 
-    Returns: An instance with the schema for the service in json format,
+    Return: An instance with the schema for the service in json format,
              As well as the tables required to fulfill some fields
     """
     # Attributes
@@ -36,11 +36,10 @@ class Schema:
         the information required to build the list(s) in json format.
         The tables are kept permanently in memory as attributes of each instance
         """
-        url_tables_schemas=self._schema.get("urlCodeTables")
-        for key in url_tables_schemas:
-            table_key=key
+        schema_url_tables=self._schema.get("urlCodeTables")
+        for key in schema_url_tables:
             table_content={}
-            schema_define_table = url_tables_schemas.get(key)
+            schema_define_table = schema_url_tables.get(key)
             url_table = schema_define_table.get("url")
             table_schema = url_request(url_table)
             if schema_define_table.get("type")=="array":
@@ -54,6 +53,8 @@ class Schema:
                     value=item.get(schema_field)
                     table_content[code]=value
             self._tables[key]=table_content
+
+        return self._tables
 
     def get_from_table(self, field, item):
         """
@@ -69,8 +70,8 @@ class Schema:
         """
         fields=field.split(".")
         table_name=fields[0]
-        column_name=fields[1]
         data_field=item.get(table_name)
+        column_name=fields[1]
         code=data_field.get(column_name)
         return self._tables.get(table_name).get(code)
 
@@ -83,7 +84,7 @@ class Geolocator(object):
     Params:
       object: Required to create the class
 
-    Returns: A single instance containing all the
+    Return: A single instance containing all the
     schemas, each readable through its own key
     """
     # Attributes
@@ -95,7 +96,7 @@ class Geolocator(object):
         """
         Create a single instance and read the schemas
 
-        Returns: the only instance of this object
+        Return: the only instance of this object
         """
         if cls._instance is None:
             cls._instance = super(Geolocator, cls).__new__(cls)
@@ -109,7 +110,7 @@ class Geolocator(object):
         """
         Read the schemas from S3 service
 
-        Returns: the schemas once they are read from the bucket
+        Return: the schemas once they are read from the bucket
         """
         bucket = s3_manager.get_s3_bucket()
         #schemas
@@ -125,7 +126,6 @@ class Geolocator(object):
         # schemas of all services provided
         _out_api_properties = self._schemas.get(OUT_API).get(PROPERTIES)
         for key in _out_api_properties:
-            service = _services_dict.get(key)
             service_schema = s3_manager.read_file(bucket,_services_dict[key])
             #_schemas list of objects instead of string.json
             self._schemas[key] = Schema(json.loads(service_schema))
@@ -135,6 +135,6 @@ class Geolocator(object):
         """
         Method to get access to the schemas
 
-        Returns: A dictionary with all the read schemas
+        Return: A dictionary with all the read schemas
         """
         return self._schemas

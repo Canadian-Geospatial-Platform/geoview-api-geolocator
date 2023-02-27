@@ -1,8 +1,9 @@
+import sys
+import time
 from geolocator import Geolocator
 from params_manager import *
 from model_manager import *
 from constants import *
-import time
 
 def lambda_handler(event, context):
     """
@@ -22,7 +23,7 @@ def lambda_handler(event, context):
       event: Contiens the query parameters
       context: Not required for this function
 
-    Returns: Standarized, validated data from REST services related to
+    Return: Standarized, validated data from REST services related to
              geolocation to be handed to the front-end
     """
     # Initilize variables and objects
@@ -31,7 +32,6 @@ def lambda_handler(event, context):
     # Read schemas from Geolocator
     schemas = geolocator.get_schemas()
     # Extract IO schemas
-    #time_ini = time.time()
     in_api_schema = schemas.get(IN_API)
     out_api_schema = schemas.get(OUT_API)
     output_schema = out_api_schema.get("definitions").get("output")
@@ -41,20 +41,29 @@ def lambda_handler(event, context):
     params_full_list = validate_querystring_against_schema(event,in_api_schema)
     keys = params_full_list.pop("keys")
     # services to call
-    for service in keys:
-        model = schemas.get(service)
+    for service_id in keys:
+        t0 = time.time()
+        model = schemas.get(service_id)
         schema = model.get_schema()
         # Adjust the parameters to the service's schema
+        t1 = time.time()
         url = assemble_url(schema, params_full_list.copy())
         # At this point the query must be complete
-        service_load = url_request(url)
+        t2 = time.time()
+        service_load= url_request(url)
         # At this point is where the 'out' part of each model applies
-        items = items_from_service(service,
+        t3 = time.time()
+        items = items_from_service(service_id,
                                    model,
                                    schema_items,
                                    schema_required,
                                    service_load)
+        t4 = time.time()
+        print(f"main-Get schema: {((t1-t0)*1000):.3f}")
+        print(f"main-build url: {((t2-t1)*1000):.3f}")
+        print(f"main-url request: {((t3-t2)*1000):.3f}")
+        print(f"main-call items for service: {((t4-t3)*1000):.3f}")
+        print("*** All the times are in miliseconds ***")
         loads.extend(items)
-    #time_lapse = time.time() - time_ini
-    #loads.append(time_lapse)
+
     return loads
