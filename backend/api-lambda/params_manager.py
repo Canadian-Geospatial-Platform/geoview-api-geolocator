@@ -1,3 +1,5 @@
+from exceptions import *
+
 def validate_required_parameters_with_schema(schema, parameters):
     """
     Identifies the required parameters and Return child schema and params
@@ -14,7 +16,7 @@ def validate_required_parameters_with_schema(schema, parameters):
     for require in schema_required:
         if not parameters.get(require):
             error_message = f"inexistent parameter '{require}'"
-            raise Exception(error_message)
+            raise MissingParameterException(error_message)
         schema_params = schema_properties[require]
         url_params = parameters[require]
     return url_params, schema_params
@@ -54,7 +56,7 @@ def validate_param_with_schema(param, schema):
         if enum:
             if param not in enum:
                 error_message = f"invalid parameter value '{param}'"
-                raise Exception(error_message)
+                raise InvalidParameterException(error_message)
         else:
             param = param.replace(" ","+")
     else:
@@ -65,7 +67,7 @@ def validate_param_with_schema(param, schema):
         invalid = [item_prm for item_prm in param if item_prm not in enum]
         if len(invalid) > 0:
             error_message = f"invalid parameter value(s) '{invalid}'"
-            raise Exception(error_message)
+            raise InvalidParameterException(error_message)
 
     return param
 

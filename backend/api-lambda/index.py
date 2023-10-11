@@ -2,6 +2,7 @@ from geolocator import Geolocator
 from params_manager import *
 from model_manager import *
 from constants import *
+from exceptions import *
 
 def handler(event, context):
     """
@@ -26,6 +27,7 @@ def handler(event, context):
     """
 
     event = {'params': {'querystring': event["queryStringParameters"]}}
+
     # Initilize variables and objects
     loads = []
     geolocator = Geolocator()
@@ -39,7 +41,12 @@ def handler(event, context):
                             get("output"). \
                             get("items")
     # 0. Read and Validate the parameters
-    params_full_list = validate_querystring_against_schema(event,in_api_schema)
+    try:
+        params_full_list = validate_querystring_against_schema(event,in_api_schema)
+    except MissingParameterException as e:
+        response = {"statusCode": 200, "body": '{ "message_en": "Mandatory \'/?q=\' parameter not provided", "message_fr": "Paramètre obligatoire \'/?q=\' non fourni" }'}
+        return response
+        
     keys = params_full_list.pop("keys")
     lang = params_full_list.get("lang")
     # Only required for lookup tables
@@ -71,3 +78,7 @@ def handler(event, context):
     }
 
     return response
+
+def nonesafe_loads(obj):
+    if obj is not None:
+        return json.loads(obj)
