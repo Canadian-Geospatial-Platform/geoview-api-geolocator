@@ -5,7 +5,7 @@ from url_methods import *
 from constants import *
 
 # tables from json service url 
-service_tables = {'generic': {}, 'province': {}} 
+service_tables = {'generic': {}, 'province': {}}
 
 def get_from_schema(schema, item):
     """
@@ -53,15 +53,17 @@ def get_from_table(table_params, field, item):
     term_en = get_table_code(tables, table_name, code, 'en')
     term_fr = get_table_code(tables, table_name, code, 'fr')
     term = {'en' : term_en, 'fr' : term_fr}
+    
     # add missing code to table
     if term_en != 'undefined' and term_fr != 'undefined':
-        tables[table_name][code] = term  
+        tables[table_name][code] = term
         table_update[table_name][code] = term
+
     return term.get(lang)
 
 def get_table_code(tables, table_name, code, lang):
     """
-    get missing code definition from service url  
+    get missing code definition from service url
     Params:
       tables: The lookup tables
       table_name: name of table, generic, province or tableurl
@@ -70,8 +72,8 @@ def get_table_code(tables, table_name, code, lang):
     Return:
         The term or description of the missing code for the lang 
     """
-    if lang not in service_tables[table_name]:   
-        if 'tableurl' in tables:  
+    if lang not in service_tables[table_name]:
+        if 'tableurl' in tables:
             table_url = tables.get('tableurl').get(table_name).get(lang)
             print(table_name, 'table', lang, 'update url=', table_url)
             try:
@@ -84,6 +86,7 @@ def get_table_code(tables, table_name, code, lang):
         else: 
             print('tableurl.csv missing from S3 bucket')
             return 'undefined'
+        
     if 'definitions' in service_tables[table_name][lang]:
         definitions = service_tables[table_name][lang].get('definitions')
         for definition in definitions:
@@ -92,6 +95,7 @@ def get_table_code(tables, table_name, code, lang):
                     return definition.get('description')
                 else:
                     return definition.get('term')
+                
     return 'undefined'
 
 def get_from_array(schema, lookup, item):

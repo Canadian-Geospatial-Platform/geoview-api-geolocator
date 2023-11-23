@@ -75,8 +75,7 @@ class Geolocator():
     def write_table(self, table_name, tables):
         """
         Write the tables to S3 service
-
-        Return:  
+        Return:
         """
         bucket = s3_manager.get_s3_bucket()
         s3_manager.write_table(bucket, table_name, tables)
