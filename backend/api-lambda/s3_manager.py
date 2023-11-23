@@ -90,7 +90,6 @@ def write_table(bucket_name, table_name, tables):
     for num,val in sorted(table.items(), key=lambda num: int(num[0])):  # sort by code as integer 
         row = {'code': num, 'en': val.get('en'), 'fr': val.get('fr')}
         writer.writerow(row)
-
     content = csv_string.getvalue()
     filename = TABLES_PATH + table_name + '.csv'
     try:

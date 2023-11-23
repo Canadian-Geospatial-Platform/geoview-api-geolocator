@@ -6,7 +6,6 @@ from constants import *
 
 # tables from json service url 
 service_tables = {'generic': {}, 'province': {}} 
-
 def get_from_schema(schema, item):
     """
     Get the data value asociated with an specific field from a data item
@@ -48,7 +47,6 @@ def get_from_table(table_params, field, item):
     table_name = field.split('.')[0]
     if code in tables.get(table_name):
        return tables.get(table_name).get(code).get(lang)
-    
     # missing code in table
     term_en = get_table_code(tables, table_name, code, 'en')
     term_fr = get_table_code(tables, table_name, code, 'fr')
