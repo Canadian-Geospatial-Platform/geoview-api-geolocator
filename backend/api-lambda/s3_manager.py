@@ -73,21 +73,22 @@ def get_tables(bucket_name, tables_path):
 
 def write_table(bucket_name, table_name, tables):
     """
-    write table content to csv file in bucket's tables path 
+    write table content to csv file in bucket's tables path
     Param:
       bucket_name: The name of the bucket to write to
-      table_name: generic or province 
+      table_name: generic or province
       tables: tables to create csv from
-    Return:  
+    Return:
     """
     s3 = boto3.resource('s3')
     bucket = s3.Bucket(bucket_name).name
     table = tables.get(table_name)
     csv_columns = ['code','en','fr']
-    csv_string = io.StringIO()  # create csv to string  
+
+    csv_string = io.StringIO()  # create csv to string
     writer = csv.DictWriter(csv_string, fieldnames=csv_columns)
     writer.writeheader()
-    for num,val in sorted(table.items(), key=lambda num: int(num[0])):  # sort by code as integer 
+    for num,val in sorted(table.items(), key=lambda num: int(num[0])):  # sort by code as integer
         row = {'code': num, 'en': val.get('en'), 'fr': val.get('fr')}
         writer.writerow(row)
 
@@ -99,8 +100,9 @@ def write_table(bucket_name, table_name, tables):
     except Exception as error:
         print("content_object write error to S3 bucket", type(error).__name__)
         print('error=', error)
+
     return
-    
+
 def get_schemas_paths(bucket_name):
     """
     Get the path to access all the objects in the bucket
