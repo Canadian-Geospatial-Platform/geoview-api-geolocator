@@ -29,7 +29,7 @@ def get_from_schema(schema, item):
             return None
     return item
 
-def get_from_table(table_params, field, item):
+def get_from_table(table_params, field, lookup, item):
     """
     Get the data value asociated with an specific field from a table inside the
     model
@@ -38,26 +38,31 @@ def get_from_table(table_params, field, item):
       table_params:
         tables: The lookup tables for specific fields in schema
         lang: The lang for the search
+        table_update: missing codes to update
       field: the nested fields to access the code
+      lookup: type and field source to update (description or term)
       item: the data record
     Return:
         The string corresponding to that table, code, language
     """
     tables, lang, table_update = table_params
-    code = get_from_schema(field, item)
     table_name = field.split('.')[0]
-    field_name = field.split('.')[1]
-    # component.generic use generic lookup table
-    if table_name == 'component' and field_name == 'generic':
-        table_name = 'generic'
+    code = get_from_schema(field, item)
+    if code is None:
+        return 'undefined'
+    # category table lookup french only (nominatim key)
+    if table_name == 'category' and lang == 'en':
+        return code.capitalize()
 
-    if code in tables.get(table_name):
-       return tables.get(table_name).get(code).get(lang)
+    codes = code.split(',') # in rare cases 2 values
+    for code in codes:
+        if code in tables.get(table_name):
+           return tables.get(table_name).get(code).get(lang)
 
     # missing code in table
-    print('missing code=', code, ' lang=', lang)
-    term_en = get_table_code(tables, table_name, code, 'en')
-    term_fr = get_table_code(tables, table_name, code, 'fr')
+    print('missing code=', code, ' lang=', lang, 'field=', field, 'item=', item)
+    term_en = get_table_code(tables, table_name, lookup, code, 'en')
+    term_fr = get_table_code(tables, table_name, lookup, code, 'fr')
     term = {'en' : term_en, 'fr' : term_fr}
 
     # add missing code to table
@@ -67,12 +72,13 @@ def get_from_table(table_params, field, item):
 
     return term.get(lang)
 
-def get_table_code(tables, table_name, code, lang):
+def get_table_code(tables, table_name, lookup, code, lang):
     """
     get missing code definition from service url
     Params:
       tables: The lookup tables
       table_name: name of table, generic, province or tableurl
+      lookup: type and field source (description or term)
       code: The missing code
       lang: The lang of the missing code
     Return:
@@ -101,10 +107,7 @@ def get_table_code(tables, table_name, code, lang):
         definitions = service_tables[table_name][lang].get('definitions')
         for definition in definitions:
             if definition.get('code') == code:
-                if table_name == 'province':
-                    return definition.get('description')
-                else:
-                    return definition.get('term')
+                return definition.get(lookup.get('field'))
 
     return 'undefined'
 
@@ -167,33 +170,92 @@ def get_average(schema, index_list, item):
 
 def get_from_csv(table_params, field, lookup, item):
     """
-    Search for province name in csv string
-    Start search at end of csv string
+    Search for province or location name in csv string
 
     Params:
+      table_params:
+        tables: The lookup tables for specific fields in schema
+        lang: The lang for the search
+        table_update: missing codes to update
       field: The schema or field name
       lookup: the number of fields in the csv string to search
       item: the data record
     Return:
-        The province name matching csv item
+        The province or location name
     """
     tables, lang, table_update = table_params
     item_value = get_from_schema(field, item)
     item_list = item_value.split(',')
-    item_list.reverse() # search from end of csv string
-    search_range = int(lookup.get("field"))
+    search_field =  lookup.get("field")
+    search_range =  int(lookup.get("range"))
 
-    if 'component' in tables:
-        provinces = tables.get('component')
-        for province in provinces:
-            province_name = provinces.get(province).get(lang)
-            if province_name:
-                for key in range(search_range):
-                    if key < len(item_list):
-                        if province_name in item_list[key]:
-                            return province_name
+    if search_field == 'province':
+        if 'component' in tables:
+            item_list.reverse() # search from end of csv string
+            provinces = tables.get('component')
+            for province in provinces:
+                province_name = provinces.get(province).get(lang)
+                if province_name:
+                    for key in range(search_range):
+                        if key < len(item_list):
+                            if province_name in item_list[key]:
+                                return province_name
+
+    if search_field == 'name':
+        if search_range <= len(item_list):
+            name_list = item_list[:search_range]  # list slice
+            name = ','.join(name_list)
+            return name
 
     return 'undefined'
+
+def get_from_type(table_params, field, lookup, item):
+    """
+    Get name or tag depending on type field for locate key (Geoname, street, intersection, etc)
+
+    Params:
+      table_params:
+        tables: The lookup tables for specific fields in schema
+        lang: The lang for the search
+        table_update: missing codes to update
+      field: The schema or field name
+      lookup: the lookup type (name or tag)
+      item: the data record
+    Return:
+        The location name or tag
+    """
+    tables, lang, table_update = table_params
+    lookup_field = lookup.get("field")
+    item_type_list = get_from_schema('type', item).split('.')
+    item_type = item_type_list[-1] # determine type from last element of type field
+
+    if lookup_field == 'name':
+        if item_type == 'Geoname':
+            return get_from_schema(field, item)
+        elif item_type == "NTS":
+            return get_from_schema('title', item)
+        else:
+            streetname = get_from_schema('component.streetname', item)
+            placename = get_from_schema('component.placename', item)
+            if placename is not None:
+                streetname = streetname + ', ' + placename
+            return streetname
+
+    # tag type
+    if item_type == 'Geoname':
+    # component.generic use generic lookup table
+        code = get_from_schema(field, item)
+        if code in tables.get('generic'):
+            return tables.get('generic').get(code).get(lang)
+        else:
+            return 'undefined'
+    else:
+        # category table lookup french only
+        if lang == 'fr':
+            if item_type.lower() in tables.get('category'):
+                item_type = tables.get('category').get(item_type.lower()).get(lang)
+        return item_type
+
 
 def function_error():
     """
@@ -240,6 +302,8 @@ def get_function_from_schema(schema, item):
         return get_from_url
     elif schema_type == "csv":
         return get_from_csv
+    elif schema_type == "type":
+        return get_from_type
     else:
         return function_error
 
@@ -262,7 +326,11 @@ def get_results(table_params, function_field, item):
     if "get_from_schema" in function.__name__:
         return function(item_schema.get("field"), item)
     elif "get_from_table" in function.__name__:
-        return function(table_params, item_schema.get("field"), item)
+        lookup = item_schema.get("lookup")
+        return function(table_params,
+                        item_schema.get("field"),
+                        lookup,
+                        item)
     elif "get_from_array" in function.__name__:
         field = item_schema.get("field")
         lookup = item_schema.get("lookup")
@@ -282,6 +350,10 @@ def get_results(table_params, function_field, item):
         ndx_list = item_schema.get("lookup").get("at")
         return function(field, ndx_list, item)
     elif "get_from_csv" in function.__name__:
+        field = item_schema.get("field")
+        lookup = item_schema.get("lookup")
+        return function(table_params, field, lookup, item)
+    elif "get_from_type" in function.__name__:
         field = item_schema.get("field")
         lookup = item_schema.get("lookup")
         return function(table_params, field, lookup, item)
@@ -446,6 +518,7 @@ def apply_out_schema(parameters_tuple):
     output_schema, item = parameters_tuple
     output_fields = output_schema.get("properties")
     output_required = output_schema.get("required")
+
     for key in output_fields:
         value = item.get(key)
         # Validate required parameters
@@ -466,13 +539,15 @@ def apply_out_schema(parameters_tuple):
                 item[key] = f"{value} - {schema_error}"
             else:
                 item[key] = val
+
     return item
 
 def items_from_service(service,
                        table_params,
                        service_schema,
                        output_schema,
-                       load):
+                       load,
+                       item_keys):
     """
     Based on the output schema and api-out schema, return the formated
     data using multiprocessing to accelerate the task
@@ -486,6 +561,7 @@ def items_from_service(service,
       schema_required: The section of the out-api schema to validate the
                        prescence of 'required' fields in the data layer
       load: The input set of data items
+      item_keys: name, province and tag for each output item
 
     Return: A set of output items standarized and validated
     """
@@ -503,6 +579,15 @@ def items_from_service(service,
                                      table_params,
                                      functions_by_field,
                                      data_item))
+
+            # check for duplicate item (name, province and tag)
+            item_name = item['name']
+            if item_name in item_keys:
+                if item_keys[item_name]['province'] == item['province'] and \
+                   item_keys[item_name]['tag'] == item['tag'] :
+                    continue
+            item_keys[item_name] = {'province': item['province'], 'tag': item['tag']}
+
             # Add the item to the list for the next process
             list_to_process.append((output_schema, item))
         num =len(list_to_process)

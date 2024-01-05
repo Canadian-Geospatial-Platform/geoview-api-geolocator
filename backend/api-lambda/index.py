@@ -50,6 +50,8 @@ def handler(event, context):
     # Only required for lookup tables
     table_update = {'generic': {}, 'province': {}}  # missing codes from tables
     table_params = (tables, lang, table_update)
+    # keep item keys to check for duplicates
+    item_keys = {}
     # services to call
     for service_id in keys:
         # The schema for this service
@@ -63,11 +65,13 @@ def handler(event, context):
                                    table_params,
                                    service_schema,
                                    output_schema_items,
-                                   service_load)
+                                   service_load,
+                                   item_keys)
         loads.extend(items)
 
     # write csv files if table updated
     for table_name in table_update:
+        print('table_name=', table_name, ' table_update=', table_update)
         if any(table_update[table_name]):
             print(table_name, ' table updates:', table_update[table_name])
             geolocator.write_table(table_name, tables)
