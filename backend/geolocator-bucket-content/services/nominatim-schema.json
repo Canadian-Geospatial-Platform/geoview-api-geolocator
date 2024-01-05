@@ -18,7 +18,11 @@
         "data": {
             "name": {
                 "field": "display_name",
-                "lookup": ""
+                "lookup": {
+                    "type": "csv",
+                    "field": "name",
+                    "range": "3"
+                }
             },
             "lat": {
                 "field":"lat",
@@ -59,13 +63,26 @@
                 }
             ],
             "province": {
-                "field": "",
-                "lookup": ""
+                "field": "display_name",
+                "lookup": {
+                    "type": "csv",
+                    "field": "province",
+                    "range": "3"
+                }
             },
-            "tag": {
-                    "field": "class",
+            "tag":  [
+                {
+                    "field": "category",
                     "lookup": ""
-            }
+                },
+                {
+                    "field": "category",
+                    "lookup": {
+                        "type": "table",
+                        "field": "description"
+                    }
+                }
+            ]
         }
     }
   }

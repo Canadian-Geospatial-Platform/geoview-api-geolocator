@@ -111,7 +111,9 @@ Lookup can have several signatures:
 	* average. Calculate the average of a subset of numeric values from a field
                containing a list of numerics (such as bbox)
     * url. The data value comes from a table obtained from a url (deprecated)
-
+    * csv. The data value is extracted from a csv (comma separated values) string
+    * type. The data value is extracted from different fields or tables depending on
+              the value in the type field
 ### Response time
 The response time for the query depends on several factors:
   - The service required. Different services perform different based on the
