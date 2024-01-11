@@ -29,7 +29,7 @@
               "uniqueItems": true,
               "items": {
                 "type": "string",
-                "enum": ["geonames", "nominatim", "locate", "nts"]
+                "enum": ["geonames", "nominatim", "locate"]
               },
               "description": "The list of supported API key to query. Optional parameter, if missing, all supported key will be query."
             }
