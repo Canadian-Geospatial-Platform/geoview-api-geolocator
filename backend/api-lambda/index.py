@@ -29,6 +29,7 @@ def handler(event, context):
     event = {'params': {'querystring': event["queryStringParameters"]}}
     # Initilize variables and objects
     loads = []
+    item_keys = {} # keep item keys to check for duplicates
     geolocator = Geolocator()
     # Read schemas from Geolocator
     schemas = geolocator.get_schemas()
@@ -47,11 +48,14 @@ def handler(event, context):
         return response    
     keys = params_full_list.pop("keys")
     lang = params_full_list.get("lang")
+    debug = params_full_list.pop("debug")
+    if debug == 'true':
+        debug = True
+    else:
+        debug = False
     # Only required for lookup tables
     table_update = {'generic': {}, 'province': {}}  # missing codes from tables
     table_params = (tables, lang, table_update)
-    # keep item keys to check for duplicates
-    item_keys = {}
     # services to call
     for service_id in keys:
         # The schema for this service
@@ -66,12 +70,12 @@ def handler(event, context):
                                    service_schema,
                                    output_schema_items,
                                    service_load,
-                                   item_keys)
+                                   item_keys,
+                                   debug)
         loads.extend(items)
 
     # write csv files if table updated
     for table_name in table_update:
-        print('table_name=', table_name, ' table_update=', table_update)
         if any(table_update[table_name]):
             print(table_name, ' table updates:', table_update[table_name])
             geolocator.write_table(table_name, tables)

@@ -8,8 +8,9 @@ highway,Highway,Autoroute
 leisure,Leisure,Loisirs
 natural,Natural,Naturel
 place,Place,Lieu
+postalcode,Postal Code,Code Postal
 shop,Shop,Magasin
 street,Street,Rue
 town,Town,Ville
 village,Village,Village
-postalcode,Postal Code,Code Postal
+waterway,Waterway,Voie navigable

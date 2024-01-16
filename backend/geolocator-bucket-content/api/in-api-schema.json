@@ -24,7 +24,13 @@
               "default" : "en",
               "description": "The language on wich to filter the query."
             },
-            "keys": {
+            "debug": {
+              "type": "string",
+              "enum": ["true", "false"],
+              "default" : "false",
+              "description": "show fields that are null or undefined"
+            },
+           "keys": {
               "type": "array",
               "uniqueItems": true,
               "items": {
