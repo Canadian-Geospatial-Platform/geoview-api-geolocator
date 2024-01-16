@@ -12,6 +12,7 @@ API_PATH = 'api/'
 SERVICES_PATH = 'services/'
 TABLES_PATH = 'tables/'
 CSV = ".csv"
+UNDEFINED = 'undefined'
 
 # Error Messages
 ERR_UNEXPECTED_SCHEMA_TYPE = "An unexpected type of schema for this field"

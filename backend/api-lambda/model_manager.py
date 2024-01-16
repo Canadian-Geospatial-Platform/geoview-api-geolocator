@@ -49,7 +49,7 @@ def get_from_table(table_params, field, lookup, item):
     table_name = field.split('.')[0]
     code = get_from_schema(field, item)
     if code is None:
-        return 'undefined'
+        return UNDEFINED
     # category table lookup french only (nominatim key)
     if table_name == 'category' and lang == 'en':
         return code.capitalize()
@@ -66,7 +66,7 @@ def get_from_table(table_params, field, lookup, item):
     term = {'en' : term_en, 'fr' : term_fr}
 
     # add missing code to table
-    if term_en != 'undefined' and term_fr != 'undefined':
+    if term_en != UNDEFINED and term_fr != UNDEFINED:
         tables[table_name][code] = term
         table_update[table_name][code] = term
 
@@ -86,7 +86,7 @@ def get_table_code(tables, table_name, lookup, code, lang):
     """
 
     if table_name not in service_tables:
-        return 'undefined'
+        return UNDEFINED
 
     if lang not in service_tables[table_name]:
         if 'tableurl' in tables:
@@ -98,10 +98,10 @@ def get_table_code(tables, table_name, lookup, code, lang):
             except Exception as error:
                 print("An exception occurred:", type(error).__name__)
                 print('Error=', error, ' url:', table_url)
-                return 'undefined'
+                return UNDEFINED
         else: 
             print('tableurl.csv missing from S3 bucket')
-            return 'undefined'
+            return UNDEFINED
 
     if 'definitions' in service_tables[table_name][lang]:
         definitions = service_tables[table_name][lang].get('definitions')
@@ -109,7 +109,7 @@ def get_table_code(tables, table_name, lookup, code, lang):
             if definition.get('code') == code:
                 return definition.get(lookup.get('field'))
 
-    return 'undefined'
+    return UNDEFINED
 
 def get_from_array(schema, lookup, item):
     """
@@ -207,7 +207,7 @@ def get_from_csv(table_params, field, lookup, item):
             name = ','.join(name_list)
             return name
 
-    return 'undefined'
+    return UNDEFINED
 
 def get_from_type(table_params, field, lookup, item):
     """
@@ -250,7 +250,7 @@ def get_from_type(table_params, field, lookup, item):
         if code in tables.get('generic'):
             return tables.get('generic').get(code).get(lang)
         else:
-            return 'undefined'
+            return UNDEFINED
     else:
         if item_type.lower() in tables.get('category'):
             item_type = tables.get('category').get(item_type.lower()).get(lang)
@@ -271,6 +271,21 @@ def function_null():
         Null value 
     """
     return NULL
+
+def function_debug(result, debug, service):
+    """
+    Params:
+        result: string containing NULL or UNDEFINED
+        service: service key 
+        debug: url parameter, true or false
+   Return:
+        debug true: result + service key
+        debug false: empty string
+    """
+    if debug:
+        return result + ' (' + service + ' key)'
+    else:
+        return ''
 
 def get_function_from_schema(schema, item):
     """
@@ -474,7 +489,8 @@ def get_functions(schema, item):
 async def apply_service_schema(service,
                                table_params,
                                functions_by_field,
-                               data_item):
+                               data_item,
+                               debug):
     """
     Extract the required information from each item based on the service model
 
@@ -485,21 +501,30 @@ async def apply_service_schema(service,
         lang: The lang for the search
       function_by_field: the list of field functions
       data_item: The item to be affected by the functions
+      debug: url parameter to show null and undefined
 
     Return: A restructured new item matching the output requirements
     """
+
     item = {'key': service}
     for key in functions_by_field:
         functions = functions_by_field.get(key)
         if len(functions) == 1:
-            item[key] = get_results(table_params, functions[0], data_item)
+            result = get_results(table_params, functions[0], data_item)
+            if result == NULL or result == UNDEFINED:
+                result = function_debug(result, debug, service)
+            item[key] = result
         else:
             result_list = []
             for function_field in functions:
-                result_list.append(get_results(table_params,
-                                               function_field,
-                                               data_item))
+                result = get_results(table_params,
+                                     function_field,
+                                     data_item)
+                if result == NULL or result == UNDEFINED:
+                    result = function_debug(result, debug, service)
+                result_list.append(result)
             item[key] = result_list
+
     return item
 
 def apply_out_schema(parameters_tuple):
@@ -547,7 +572,8 @@ def items_from_service(service,
                        service_schema,
                        output_schema,
                        load,
-                       item_keys):
+                       item_keys,
+                       debug):
     """
     Based on the output schema and api-out schema, return the formated
     data using multiprocessing to accelerate the task
@@ -562,6 +588,7 @@ def items_from_service(service,
                        prescence of 'required' fields in the data layer
       load: The input set of data items
       item_keys: name, province and tag for each output item
+      debug: url parameter to show null and undefined
 
     Return: A set of output items standarized and validated
     """
@@ -578,7 +605,8 @@ def items_from_service(service,
                 apply_service_schema(service,
                                      table_params,
                                      functions_by_field,
-                                     data_item))
+                                     data_item,
+                                     debug))
 
             # check for duplicate item (name, province and tag)
             item_name = item['name']
