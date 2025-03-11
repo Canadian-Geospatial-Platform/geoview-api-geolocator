@@ -1,3 +1,4 @@
+import re
 from geolocator import Geolocator
 from params_manager import *
 from model_manager import *
@@ -52,7 +53,15 @@ def handler(event, context):
         response = {"statusCode": 200, "body": '{"message_en": "Mandatory \'/?q= or table=\' parameter not provided", "message_fr": "Paramètre obligatoire \'/?q= or table=\' non fourni"}'}
         return response
 
-    q = params_full_list.get("q")
+    postal_code = extract_postal_prefix(params_full_list.get("q"))
+
+    if(postal_code and key_in_params("locate", params_full_list)):
+        #print("Postal code detected, using forward sortation area instead")
+        q = extract_postal_prefix(params_full_list.get("q"))
+        params_full_list.update({"q": q}) #need to update this variable as only q and lang are used for caching
+    else:
+        q = params_full_list.get("q")
+
     keys = params_full_list.pop("keys")
     lang = params_full_list.get("lang")
     q_lang = q + lang # compound key for cache results
@@ -107,7 +116,7 @@ def handler(event, context):
                 if any(table_update[table_name]):
                     print(table_name, ' table updates:', table_update[table_name])
                     geolocator.write_table(table_name, tables)
-
+    
     response = {
         "statusCode": 200,
         "headers": {
@@ -169,3 +178,23 @@ def q_alphanumeric(q):
             return True
 
     return False
+
+def extract_postal_prefix(postal_code):
+    """
+    Regular expression to match postal code with a space in between
+    """
+    if re.fullmatch(r'[A-Za-z]\d[A-Za-z][\s\+]?(\d[A-Za-z]\d)', postal_code):
+        return postal_code[:3]
+    return None
+
+def key_in_params(key, params_full_list):
+    """
+    Check if key is in keys parameter
+    """
+    keys = params_full_list.get("keys", [])    
+    if isinstance(keys, str):
+        keys = keys.split(",")
+    if key in keys:
+        return True
+    else:
+        return False
