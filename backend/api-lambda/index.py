@@ -54,11 +54,13 @@ def handler(event, context):
         return response
 
     postal_code = extract_postal_prefix(params_full_list.get("q"))
+    postal_code_detected = False
 
     if(postal_code and key_in_params("locate", params_full_list)):
         #print("Postal code detected, using forward sortation area instead")
         q = extract_postal_prefix(params_full_list.get("q"))
         params_full_list.update({"q": q}) #need to update this variable as only q and lang are used for caching
+        postal_code_detected = True
     else:
         q = params_full_list.get("q")
 
@@ -106,6 +108,40 @@ def handler(event, context):
                                                item_keys,
                                                dev)
                     loads.extend(items)
+            
+            if postal_code_detected:
+                service_id = "nominatim"
+                service_schema = schemas.get(service_id)
+                lat_lon = f"{loads[0]['lat']},{loads[0]['lng']}"
+                params_full_list.update({"q": lat_lon})
+                # Adjust the parameters to the service's schema
+                url, params, code_table_urls = assemble_url(service_schema, params_full_list.copy())
+                service_load = url_request(url, params, service_id)
+                items = items_from_service(service_id,
+                                           table_params,
+                                           service_schema,
+                                           output_schema_items,
+                                           service_load,
+                                           item_keys,
+                                           dev)
+                loads.extend(items)
+
+                service_id = "geonames"
+                service_schema = schemas.get(service_id)
+                params_full_list.pop("q")
+                params_full_list.update({"lat": f"{loads[0]['lat']}", "lon": f"{loads[0]['lng']}"})
+                # Adjust the parameters to the service's schema
+                url, params, code_table_urls = assemble_url(service_schema, params_full_list.copy())
+                service_load = url_request(url, params, service_id)
+                items = items_from_service(service_id,
+                                           table_params,
+                                           service_schema,
+                                           output_schema_items,
+                                           service_load,
+                                           item_keys,
+                                           dev)
+                #print("items", items)
+                loads.extend(items)
 
             # add query result to cache
             if q_alphanumeric(q) and response_ok:
@@ -179,12 +215,27 @@ def q_alphanumeric(q):
 
     return False
 
+
 def extract_postal_prefix(postal_code):
     """
-    Regular expression to match postal code with a space in between
+    Extracts the first three characters of a valid Canadian postal code.
+    Supports:
+    - Standard format: "A1B 2C3"
+    - Plus sign separator (+ is appended by API Gateway): "A1B+2C3"
+    - No separator: "A1B2C3"
+    - FSA-only input: "A1B"
+    - Optional '*' at the end: "A1B2C3*"
+    - New groups for (A1B2 or A1B2C) and (A1B2* or A1B2C*)
     """
-    if re.fullmatch(r'[A-Za-z]\d[A-Za-z][\s\+]?(\d[A-Za-z]\d)', postal_code):
-        return postal_code[:3]
+
+    match = re.match(r'^([A-Za-z]\d[A-Za-z])(?:[\s\+]?\d[A-Za-z]\d)?\*?$|^([A-Za-z]\d[A-Za-z]\d)\*?$|^([A-Za-z]\d[A-Za-z]\d[A-Za-z])\*?$', postal_code)
+    
+    # Extract the first three characters from the match group
+    if match:
+        # group(1) handles A1B2C3, A1B 2C3, A1B+2C3, A1B, and optional '*' at the end e.g., "A1B2C3*"
+        # group(2) handles A1B2 or A1B2*
+        # group(3) handles A1B2C or A1B2C*
+        return match.group(1) or match.group(2) or match.group(3)  
     return None
 
 def key_in_params(key, params_full_list):
