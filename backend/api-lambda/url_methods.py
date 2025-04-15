@@ -1,5 +1,6 @@
 import json
 from requests import Request, Session
+from requests.exceptions import RequestException, Timeout, ConnectionError
 import asyncio
 
 def get_from_field(field, item):
@@ -143,18 +144,27 @@ def url_request(url, params, service_id):
 
     Return: The response from the call.
     """
-    s = Session()
-    request = Request('GET', url, params=params)
-    prepared_request = request.prepare()
-    query_response = s.send(prepared_request)
+    try:
+        s = Session()
+        request = Request('GET', url, params=params)
+        prepared_request = request.prepare()
+        query_response = s.send(prepared_request, timeout=3)
 
-    # check response successful (200)
-    if query_response.status_code == 200:
-        json_response = query_response.json()
-    else:
-        name = 'Service unavailable: ' + service_id
-        category = 'Response code: ' + str(query_response.status_code)
-        response_dict = {'key': 'unsuccess', 'name': name  , 'province': '', 'category': category}
-        return response_dict
+        # check response successful (200)
+        if query_response.status_code == 200:
+            json_response = query_response.json()
+        else:
+            name = 'Service unavailable: ' + service_id
+            category = 'Response code: ' + str(query_response.status_code)
+            response_dict = {'key': 'unsuccess', 'name': name  , 'province': '', 'category': category}
+            return response_dict
 
-    return json_response
+        return json_response
+    except (Timeout, ConnectionError) as e:
+        name = 'Service timeout or connection error: ' + service_id
+        category = str(type(e).__name__)
+        return {'key': 'unsuccess', 'name': name, 'province': '', 'category': category}
+    except RequestException as e:
+        name = 'Service request exception: ' + service_id
+        category = str(e)
+        return {'key': 'unsuccess', 'name': name, 'province': '', 'category': category}
