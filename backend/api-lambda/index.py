@@ -1,12 +1,19 @@
+import os
 import re
+import requests
+import boto3
 from geolocator import Geolocator
 from params_manager import *
 from model_manager import *
 from constants import *
 from exceptions import *
 from datetime import datetime
+from dashboard import *
 
 cache = {} # temporary cache of query results
+AOS_HOST = os.environ['OS_ENDPOINT']
+NEW_INDEX_NAME = os.environ['NEW_INDEX_NAME']
+REGION = 'ca-central-1'
 
 def handler(event, context):
     """
@@ -30,7 +37,12 @@ def handler(event, context):
              geolocation to be handed to the front-end
     """
 
-    event = {'params': {'querystring': event["queryStringParameters"]}}
+    search_index_name = NEW_INDEX_NAME
+    os_client = connect_to_opensearch(REGION, AOS_HOST)
+    event_copy_for_opensearch = event #previous logic removes (pops) variables from event variable (not sure why)
+
+    event = {'params': {'querystring': event}}
+    
     # Initilize variables and objects
     loads = []
     item_keys = {} # keep item keys to check for duplicates
@@ -57,7 +69,12 @@ def handler(event, context):
     postal_code_detected = False
 
     if(postal_code and key_in_params("locate", params_full_list)):
-        #print("Postal code detected, using forward sortation area instead")
+        #print("Postal code detected, using locate api for forward sortation area")
+        q = extract_postal_prefix(params_full_list.get("q"))
+        params_full_list.update({"q": q}) #need to update this variable as only q and lang are used for caching
+        postal_code_detected = True
+    elif(postal_code and key_in_params("opensearch", params_full_list)):
+        #print("Postal code detected, using opensearch api for forward sortation area ")
         q = extract_postal_prefix(params_full_list.get("q"))
         params_full_list.update({"q": q}) #need to update this variable as only q and lang are used for caching
         postal_code_detected = True
@@ -65,6 +82,7 @@ def handler(event, context):
         q = params_full_list.get("q")
 
     keys = params_full_list.pop("keys")
+    key = params_full_list.get("key")
     lang = params_full_list.get("lang")
     q_lang = q + lang # compound key for cache results
     table_parameter = params_full_list.pop("table")
@@ -152,7 +170,15 @@ def handler(event, context):
                 if any(table_update[table_name]):
                     print(table_name, ' table updates:', table_update[table_name])
                     geolocator.write_table(table_name, tables)
+            
+            #OpenSearch DashBoard code
+            if os_client:
+                write_to_opensearch (os_client, event_copy_for_opensearch, search_index_name)
+            else:
+                print("OpenSearch is not available. Skipping write.")
     
+    response = loads
+    """
     response = {
         "statusCode": 200,
         "headers": {
@@ -163,6 +189,7 @@ def handler(event, context):
             loads
         )
     }
+    """
 
     return response
 
