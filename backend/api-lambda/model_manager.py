@@ -656,8 +656,12 @@ def items_from_service(service,
                                      data_item,
                                      dev))
 
-            # check for duplicate item (name, province and category)
-            item_name_prov_cat = item['name'] + item['province'] + item['category']
+            # type-safe check for duplicate item (name, province and category)
+            item_name_prov_cat = (
+                (item.get('name') or '') +
+                (item.get('province') or '') +
+                (item.get('category') or '')
+            )
             if item_name_prov_cat in item_keys:
                 continue
             item_keys[item_name_prov_cat] = ''  # add to item_keys

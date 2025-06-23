@@ -1,0 +1,47 @@
+{
+    "url": "https://www.geolocator-stage.api.geo.ca/fsa",
+    "urlParams": {},
+    "staticParams": {},
+    "urlCodeTables": {},
+    "lookup": {
+        "in": {
+            "q": "q",
+            "lang": "accept-language"
+        },
+        "out": {
+            "structure": {
+                "type": "list"
+            },
+            "data": {
+                "name": {
+                    "field": "name",
+                    "lookup": ""
+                },
+                "province": {
+                    "field": "province",
+                    "lookup": ""
+                },
+                "category": {
+                    "field": "category",
+                    "lookup": ""
+                },
+                "lat": {
+                    "field": "lat",
+                    "lookup": ""
+                },
+                "lng": {
+                    "field": "long",
+                    "lookup": ""
+                },
+                "bbox": {
+                    "field": "bbox",
+                    "lookup": ""
+                },
+                "tag": {
+                    "field": "tag",
+                    "lookup": ""
+                }
+            }
+        }
+    }
+}

@@ -106,7 +106,13 @@
       "type": "array",
       "uniqueItems": true,
       "items": { "$ref": "#/definitions/output" },
-      "description": "The ens api result set."
+      "description": "The nts api result set."
+    },
+    "fsa": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/definitions/output" },
+      "description": "The fsa api result set."
     }
   },
   "description": "List of supported key for the API. As we add key, we need to had an entry in the schema. The entry MUST be the same key as the in in-api-schema.json (keys enum parameter)."

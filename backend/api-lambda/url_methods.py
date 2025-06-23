@@ -146,9 +146,14 @@ def url_request(url, params, service_id):
     """
     try:
         s = Session()
+        #print(url)
         request = Request('GET', url, params=params)
         prepared_request = request.prepare()
         query_response = s.send(prepared_request, timeout=3)
+        #print("Status Code:", query_response.status_code)
+        #print("Reason:", query_response.reason)
+        #print("Headers:", query_response.headers)
+        #print("Text:", query_response.text)
 
         # check response successful (200)
         if query_response.status_code == 200:

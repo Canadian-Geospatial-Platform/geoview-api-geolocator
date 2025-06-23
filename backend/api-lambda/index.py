@@ -73,7 +73,7 @@ def handler(event, context):
         q = extract_postal_prefix(params_full_list.get("q"))
         params_full_list.update({"q": q}) #need to update this variable as only q and lang are used for caching
         postal_code_detected = True
-    elif(postal_code and key_in_params("opensearch", params_full_list)):
+    elif(postal_code and key_in_params("fsa", params_full_list)):
         #print("Postal code detected, using opensearch api for forward sortation area ")
         q = extract_postal_prefix(params_full_list.get("q"))
         params_full_list.update({"q": q}) #need to update this variable as only q and lang are used for caching
@@ -111,6 +111,10 @@ def handler(event, context):
                     tables.update(code_table_urls) # add urls to table
                 # At this point the query must be complete
                 service_load = url_request(url, params,service_id)
+                print("service_load", service_load)
+                if service_load == [{}]:
+                    continue # Skip this iteration and move to the next one
+
                 # check response status
                 if 'key' in service_load and service_load.get('key') == 'unsuccess':
                     response_ok = False
@@ -128,38 +132,41 @@ def handler(event, context):
                     loads.extend(items)
             
             if postal_code_detected:
-                service_id = "nominatim"
-                service_schema = schemas.get(service_id)
-                lat_lon = f"{loads[0]['lat']},{loads[0]['lng']}"
-                params_full_list.update({"q": lat_lon})
-                # Adjust the parameters to the service's schema
-                url, params, code_table_urls = assemble_url(service_schema, params_full_list.copy())
-                service_load = url_request(url, params, service_id)
-                items = items_from_service(service_id,
-                                           table_params,
-                                           service_schema,
-                                           output_schema_items,
-                                           service_load,
-                                           item_keys,
-                                           dev)
-                loads.extend(items)
+                try:
+                    service_id = "nominatim"
+                    service_schema = schemas.get(service_id)
+                    lat_lon = f"{loads[0]['lat']},{loads[0]['lng']}"
+                    params_full_list.update({"q": lat_lon})
+                    # Adjust the parameters to the service's schema
+                    url, params, code_table_urls = assemble_url(service_schema, params_full_list.copy())
+                    service_load = url_request(url, params, service_id)
+                    items = items_from_service(service_id,
+                                            table_params,
+                                            service_schema,
+                                            output_schema_items,
+                                            service_load,
+                                            item_keys,
+                                            dev)
+                    loads.extend(items)
 
-                service_id = "geonames"
-                service_schema = schemas.get(service_id)
-                params_full_list.pop("q")
-                params_full_list.update({"lat": f"{loads[0]['lat']}", "lon": f"{loads[0]['lng']}"})
-                # Adjust the parameters to the service's schema
-                url, params, code_table_urls = assemble_url(service_schema, params_full_list.copy())
-                service_load = url_request(url, params, service_id)
-                items = items_from_service(service_id,
-                                           table_params,
-                                           service_schema,
-                                           output_schema_items,
-                                           service_load,
-                                           item_keys,
-                                           dev)
-                #print("items", items)
-                loads.extend(items)
+                    service_id = "geonames"
+                    service_schema = schemas.get(service_id)
+                    params_full_list.pop("q")
+                    params_full_list.update({"lat": f"{loads[0]['lat']}", "lon": f"{loads[0]['lng']}"})
+                    # Adjust the parameters to the service's schema
+                    url, params, code_table_urls = assemble_url(service_schema, params_full_list.copy())
+                    service_load = url_request(url, params, service_id)
+                    items = items_from_service(service_id,
+                                            table_params,
+                                            service_schema,
+                                            output_schema_items,
+                                            service_load,
+                                            item_keys,
+                                            dev)
+                    #print("items", items)
+                    loads.extend(items)
+                except:
+                    pass # try is experimental so continue if it fails
 
             # add query result to cache
             if q_alphanumeric(q) and response_ok:
