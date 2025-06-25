@@ -139,7 +139,7 @@ def lambda_handler(event, context):
                 "long": long,
                 "lat": lat,
                 "bbox": bbox_array,
-                "tag": str(area) + " km^3"
+                "tag": str(area) + " km^2"
             }
 
         return [ 
