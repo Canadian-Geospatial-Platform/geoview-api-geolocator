@@ -51,7 +51,6 @@ def write_to_opensearch(os_client, event_copy_for_opensearch, search_index_name)
             "q": q,
             "key": key,
             "keys": keys,
-            "ip_address": ip_address,
             "user_agent": user_agent,
             "http_method": http_method,
             "ip2geo": ip2geo_data
