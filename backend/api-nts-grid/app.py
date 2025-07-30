@@ -48,6 +48,7 @@ def lambda_handler(event, context):
 
     # Case 1: q parsed as a geo_point
     if isinstance(parsed, dict) and "type" in parsed:
+        parsed = to_lonlat(parsed)
         should_clauses.append({
             "geo_shape": {
                 "location": {
@@ -91,7 +92,7 @@ def lambda_handler(event, context):
         try:
             name = json_object['hits']['hits'][0]['_source']['attributes']['NTS_SNRC']
             if json_object['hits']['hits'][0]['_source']['attributes']['NAME_ENG']:
-                desc = str(json_object['hits']['hits'][0]['_source']['attributes']['NAME_ENG']) + ", " + str(json_object['hits']['hits'][0]['_source']['attributes']['NOM_FRA'])
+                desc = str(json_object['hits']['hits'][0]['_source']['attributes']['NAME_ENG'])
             else:
                 desc = ''
             long = (json_object['hits']['hits'][0]['_source']['bbox']['coordinates'][0][0] + json_object['hits']['hits'][0]['_source']['bbox']['coordinates'][1][0]) / 2.0
@@ -108,12 +109,12 @@ def lambda_handler(event, context):
             response_json = {
                 "key": "nts-grid",
                 "name": name,
-                "description": desc,
+                "province": "",
                 "category": "NTS Grid 1:250000",
                 "long": long,
                 "lat": lat,
                 "bbox": bbox_array,
-                "tag": str(area) + " degrees of longituge and 1 degree of latitude"
+                "tag": desc
             }
 
             return [ 
@@ -121,10 +122,7 @@ def lambda_handler(event, context):
                 ]
         
         except IndexError:
-            return {
-                "statusCode": 404,
-                "body": json.dumps("No results found in OpenSearch")
-            }
+            return {}
     
     except requests.RequestException as e:
         return {
@@ -145,3 +143,26 @@ def parse_query(q):
     if re.match(r"^\d{2}[A-Z]$", q):
         q = '0' + q
     return q
+
+def to_lonlat(geojson_point):
+    """
+    Takes a GeoJSON-style dict with coordinates in [lat, lon] order
+    and returns a shape dict with [lon, lat] for OpenSearch.
+
+    Example input:
+      {"type": "Point", "coordinates": [45.39, -75.68]}
+    Returns:
+      {"type": "Point", "coordinates": [-75.68, 45.39]}
+    """
+    if not isinstance(geojson_point, dict):
+        raise ValueError("Expected a GeoJSON-style dict with 'coordinates' field.")
+
+    coords = geojson_point.get("coordinates")
+    if not coords or len(coords) != 2:
+        raise ValueError("Coordinates must be a list of two numbers in [lat, lon] format.")
+
+    lat, lon = coords
+    return {
+        "type": geojson_point.get("type", "Point"),
+        "coordinates": [lon, lat]  # swap for OpenSearch
+    }

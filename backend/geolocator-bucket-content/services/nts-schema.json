@@ -1,37 +1,46 @@
 {
-    "url": "https://geogratis.gc.ca/services/delimitation/_PARAM1_/nts",
-    "urlParams": {
-        "param1": "lang"
-    },
+    "url": "https://www.geolocator.api.geo.ca/nts-250k",
+    "urlParams": {},
     "staticParams": {},
     "urlCodeTables": {},
     "lookup": {
         "in": {
-            "q": "q"
+            "q": "q",
+            "lang": "accept-language"
         },
         "out": {
-            "structure" : {
-                "type": "dict",
-                "key": "features"
-                },
+            "structure": {
+                "type": "list"
+            },
             "data": {
                 "name": {
-                    "field": "properties.identifier",
+                    "field": "name",
+                    "lookup": ""
+                },
+                "province": {
+                    "field": "province",
+                    "lookup": ""
+                },
+                "category": {
+                    "field": "category",
+                    "lookup": ""
+                },
+                "lat": {
+                    "field": "lat",
+                    "lookup": ""
+                },
+                "lng": {
+                    "field": "long",
                     "lookup": ""
                 },
                 "bbox": {
                     "field": "bbox",
                     "lookup": ""
                 },
-                "province": {
-                    "field": ""
-                },
-                "tag": [
-                    {
-                        "field": "properties.scale",
-                        "lookup": ""
-                    }
-                ]
+                "tag": {
+                    "field": "tag",
+                    "lookup": ""
+                }
             }
         }
     }
