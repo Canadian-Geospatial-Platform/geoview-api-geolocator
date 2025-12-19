@@ -107,11 +107,18 @@ def handler(event, context):
                 service_schema = schemas.get(service_id)
                 # Adjust the parameters to the service's schema
                 url, params, code_table_urls = assemble_url(service_schema, params_full_list.copy())
+                temp_keys = params.get("key", "")
+                if service_id == "locate" and "q" in params:
+                    if params["q"].endswith("*"):
+                        params["q"] = params["q"][:-1]  # remove last character
+                #print("service_id", service_id)
+                #print("url", url)
+                print("params", params)
                 if code_table_urls:
                     tables.update(code_table_urls) # add urls to table
                 # At this point the query must be complete
                 service_load = url_request(url, params,service_id)
-                print("service_load", service_load)
+                #print("service_load", service_load)
                 if service_load == [{}]:
                     continue # Skip this iteration and move to the next one
 
@@ -129,6 +136,7 @@ def handler(event, context):
                                                service_load,
                                                item_keys,
                                                dev)
+                    #print("items", items)
                     loads.extend(items)
             
             if postal_code_detected:

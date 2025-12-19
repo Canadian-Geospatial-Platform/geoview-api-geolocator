@@ -1,7 +1,10 @@
+import re
 import json
 from requests import Request, Session
 from requests.exceptions import RequestException, Timeout, ConnectionError
 import asyncio
+
+from typing import Optional
 
 def get_from_field(field, item):
     """
@@ -66,7 +69,7 @@ def replace_url_with_params(url, params, params_list):
     """
     for param in params:
         param_match = "_"+param.upper()+"_"
-        replace_with = params_list.pop(params.get(param))
+        replace_with = params_list.get(params.get(param))
         url = url.replace(param_match, replace_with)
     return url
 
@@ -146,18 +149,21 @@ def url_request(url, params, service_id):
     """
     try:
         s = Session()
-        #print(url)
         request = Request('GET', url, params=params)
+        #print("url_request: ", url)
+        #print(params)
         prepared_request = request.prepare()
         query_response = s.send(prepared_request, timeout=3)
-        #print("Status Code:", query_response.status_code)
-        #print("Reason:", query_response.reason)
-        #print("Headers:", query_response.headers)
-        #print("Text:", query_response.text)
+
+        #print(prepared_request)
+
 
         # check response successful (200)
         if query_response.status_code == 200:
             json_response = query_response.json()
+            #custom logic for new geolocation mock api
+            if service_id == "locate":
+                json_response = enrich_results(json_response, params.get("lang", "en"))
         else:
             name = 'Service unavailable: ' + service_id
             category = 'Response code: ' + str(query_response.status_code)
@@ -173,3 +179,69 @@ def url_request(url, params, service_id):
         name = 'Service request exception: ' + service_id
         category = str(e)
         return {'key': 'unsuccess', 'name': name, 'province': '', 'category': category}
+
+# List of provinces/territories in English and French (kept as-is)
+PROVINCES = [
+    "Alberta", "British Columbia", "Colombie-Britannique", "Manitoba",
+    "New Brunswick", "Nouveau-Brunswick", "Newfoundland and Labrador", "Terre-Neuve-et-Labrador",
+    "Nova Scotia", "Nouvelle-Écosse", "Ontario",
+    "Prince Edward Island", "Île-du-Prince-Édouard", "Ile-du-Prince-Edouard",
+    "Quebec", "Québec", "Saskatchewan",
+    "Northwest Territories", "Territoires du Nord-Ouest", "Territoires-du-Nord-Ouest",
+    "Nunavut", "Yukon", "Territoire du Yukon",
+]
+
+CATEGORY_TRANSLATIONS_FR = {
+    "Street": "Rue",
+    "Intersection": "Intersection",  # same word in FR
+}
+
+def extract_province(title: str) -> Optional[str]:
+    """Return province/territory exactly as found in title (EN or FR)."""
+    if not title:
+        return None
+
+    for province in PROVINCES:
+        if re.search(rf"\b{re.escape(province)}\b", title, flags=re.IGNORECASE):
+            match = re.search(rf"\b({re.escape(province)})\b", title, flags=re.IGNORECASE)
+            return match.group(1) if match else province
+    return None
+
+def extract_feature_class(title: str) -> Optional[str]:
+    """Return value in parentheses from title, e.g. (Lake), (Lac), (City)."""
+    if not title:
+        return None
+    match = re.search(r"\(([^)]+)\)\s*$", title)
+    return match.group(1) if match else None
+
+def simplify_type(type_value: str, title: str, lang: str = "en") -> Optional[str]:
+    """
+    Simplify the type field:
+    - For Geonames, use value in parentheses from title.
+    - For others, use last word of fully-qualified class.
+    - Translate Street / Intersection to FR if lang=fr
+    """
+    if not type_value:
+        return None
+
+    # Geoname → use (Lake) / (Lac) etc.
+    if "Geoname" in type_value:
+        feature_class = extract_feature_class(title)
+        return feature_class if feature_class else "Geoname"
+
+    # Non-Geoname → class name
+    category = type_value.split(".")[-1]
+
+    # Translate to French if requested
+    if lang == "fr":
+        category = CATEGORY_TRANSLATIONS_FR.get(category, category)
+
+    return category
+
+def enrich_results(results: list[dict], lang: str = "en") -> list[dict]:
+    """Enrich geolocation results with province and category."""
+    for item in results:
+        title = item.get("title", "")
+        item["province"] = extract_province(title)
+        item["category"] = simplify_type(item.get("type"), title, lang)
+    return results
