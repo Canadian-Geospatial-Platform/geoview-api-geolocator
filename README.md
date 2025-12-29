@@ -1,4 +1,6 @@
-# Geoview API – Geolocator / 
+# Geoview API – Geolocator / Géolocaliseur
+
+**La version française suit.**
 
 Natural Resources Canada / Ressources naturelles Canada  
 Part of **GEO.ca**
@@ -227,11 +229,8 @@ This project is released under the applicable Government of Canada open-source l
 
 ---------------------------------------------------------------------------------------------------
 
-Below is the **French translation**, with **all markup preserved** so you can copy/paste directly into a bilingual README.
 
----
-
-# API GeoView – Géolocaliseur /
+# API GeoView – Géolocaliseur / Geolocator
 
 Ressources naturelles Canada / Natural Resources Canada
 Fait partie de **GEO.ca**
