@@ -64,6 +64,9 @@ def handler(event, context):
     except MissingParameterException as e:
         response = {"statusCode": 200, "body": '{"message_en": "Mandatory \'/?q= or table=\' parameter not provided", "message_fr": "Paramètre obligatoire \'/?q= or table=\' non fourni"}'}
         return response
+    
+    if (params_full_list.get("q") == "*"):
+        return []
 
     postal_code = extract_postal_prefix(params_full_list.get("q"))
     postal_code_detected = False
