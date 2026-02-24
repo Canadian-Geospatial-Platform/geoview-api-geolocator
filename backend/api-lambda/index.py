@@ -64,9 +64,6 @@ def handler(event, context):
     except MissingParameterException as e:
         response = {"statusCode": 200, "body": '{"message_en": "Mandatory \'/?q= or table=\' parameter not provided", "message_fr": "Paramètre obligatoire \'/?q= or table=\' non fourni"}'}
         return response
-    
-    if (params_full_list.get("q") == "*"):
-        return []
 
     postal_code = extract_postal_prefix(params_full_list.get("q"))
     postal_code_detected = False
@@ -116,7 +113,7 @@ def handler(event, context):
                         params["q"] = params["q"][:-1]  # remove last character
                 #print("service_id", service_id)
                 #print("url", url)
-                print("params", params)
+                #print("params", params)
                 if code_table_urls:
                     tables.update(code_table_urls) # add urls to table
                 # At this point the query must be complete
