@@ -13,7 +13,7 @@ from analytics import *
 from bbox_handler import *
 
 # Load geoname translations into memory once
-with open("geoname_translation.json") as f:
+with open("geonames_translation.json") as f:
     geonames = json.load(f)
 
 # Load synonyms into memory once
@@ -65,9 +65,14 @@ def lambda_handler(event, context):
     lang = get_language(event)
 
     # Get ?q= parameter
-    q = None
-    bbox_param = None
-    user_bbox = None
+    q           = None
+    bbox_param  = None
+    user_bbox   = None
+    ip_address  = None
+    timestamp   = None
+    user_agent  = None
+    http_method = None
+    referrer    = None
 
     # Use IAM credentials
     credentials = boto3.Session().get_credentials()
@@ -92,11 +97,23 @@ def lambda_handler(event, context):
 
     if isinstance(event, dict):
         if "queryStringParameters" in event and event["queryStringParameters"]:
-            q = event["queryStringParameters"].get("q")
-            bbox_param = event["queryStringParameters"].get("bbox")
+            q            = event["queryStringParameters"].get("q")
+            bbox_param   = event["queryStringParameters"].get("bbox")
+            callback     = event["queryStringParameters"].get("callback")
+            ip_address   = event["queryStringParameters"].get("ip_address")
+            timestamp    = event["queryStringParameters"].get('timestamp')
+            user_agent   = event["queryStringParameters"].get('user_agent')
+            http_method  = event["queryStringParameters"].get('http_method')
+            referrer     = event["queryStringParameters"].get('referrer')
         else:
-            q = event.get("q")
-            bbox_param = event.get("bbox")           
+            q            = event.get("q")
+            bbox_param   = event.get("bbox")
+            callback     = event.get("callback")
+            ip_address   = event.get('ip_address', '') or ''
+            timestamp    = event.get('timestamp', '') or ''
+            user_agent   = event.get('user_agent', '') or ''
+            http_method  = event.get('http_method', '') or ''
+            referrer     = event.get('referrer', '') or ''
 
     if bbox_param:
             try:
@@ -150,11 +167,7 @@ def lambda_handler(event, context):
     # Creates new OpenSearch index if it doesn't exist
     create_opensearch_index(os_client, analytics_table_name)
 
-    ip_address   = event.get('ip_address', '') or ''
-    timestamp    = event.get('timestamp', '') or ''
-    user_agent   = event.get('user_agent', '') or ''
-    http_method  = event.get('http_method', '') or ''
-    referrer     = event.get('referrer', '') or ''
+
 
     # Use existing ip2geo on opensearch instance to convert user ip_address to location
     # note: we not save or index user IP addresses but collect aggregate data
@@ -224,17 +237,25 @@ def lambda_handler(event, context):
             })
         else:
             # Use ngram field for partial matches
+            fuzziness = "AUTO" if len(parsed) <= 10 else 0
+
             should_clauses.append({
                 "multi_match": {
                     "query": parsed,
                     "fields": [
-                        "title.ngram",       # ngram autocomplete
+                        #"title.ngram",       # ngram autocomplete
                         "title^2.75",             # full title exact match
-                        "qualifier",
                         "type"
                     ],
                     "type": "best_fields",
-                    "fuzziness": "AUTO"
+                    "operator": "OR",
+                    "slop": 0,
+                    "fuzziness": fuzziness,
+                    "prefix_length": 0,
+                    "max_expansions": 10,
+                    "zero_terms_query": "NONE",
+                    "auto_generate_synonyms_phrase_query": "false",
+                    "fuzzy_transpositions": "true",
                 }
             })
 
@@ -449,7 +470,31 @@ def lambda_handler(event, context):
 
         transformed = translate_titles(geonames, transformed, lang=lang)
 
-        return transformed
+        if callback and is_valid_callback(callback):
+            return {
+                "statusCode": 200,
+                "headers": {
+                    "Content-Type": "application/javascript; charset=utf-8",
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow-Methods": "GET,OPTIONS",
+                    "Access-Control-Allow-Headers": "Content-Type,Authorization"
+                },
+                "body": f"{callback}({json.dumps(transformed, ensure_ascii=False)});",
+                "isBase64Encoded": False
+            }
+        
+        return {
+            "statusCode": 200,
+            "headers": {
+                    "Content-Type": "application/json; charset=utf-8",
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow-Methods": "GET,OPTIONS",
+                    "Access-Control-Allow-Headers": "Content-Type,Authorization",
+                    "Cache-Control": "no-store"
+            },
+            "body": json.dumps(transformed, ensure_ascii=False),
+            "isBase64Encoded": False
+        }
         
     except Exception as e:
         print("Search failed:", e)
@@ -534,3 +579,10 @@ def run_autocomplete_query(os_client, index_name, q):
             break
 
     return {"suggestions": suggestions}
+
+def is_valid_callback(callback_name: str) -> bool:
+    """
+    Allow only valid JS function names to prevent XSS.
+    e.g. jQuery123_456
+    """
+    return bool(re.match(r'^[a-zA-Z_$][0-9a-zA-Z_$\.]*$', callback_name))
