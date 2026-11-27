@@ -157,9 +157,6 @@ def lambda_handler(event, context):
     # Parse q
     parsed = parse_query(q)
 
-    # Build a flexible search query
-    should_clauses = []
-
     ##############################################
     # BEGIN ANALYTICS
     ##############################################
@@ -223,23 +220,21 @@ def lambda_handler(event, context):
         # detect wildcard
         is_wildcard = "*" in parsed or "?" in parsed
 
-        should_clauses = []
-
         if is_wildcard:
             # still allow keyword wildcard for legacy support
-            should_clauses.append({
+            match_clause = {
                 "wildcard": {
                     "title.keyword": {
                         "value": parsed.lower(),
                         "case_insensitive": True
                     }
                 }
-            })
+            }
         else:
             # Use ngram field for partial matches
             fuzziness = "AUTO" if len(parsed) <= 10 else 0
 
-            should_clauses.append({
+            match_clause = {
                 "multi_match": {
                     "query": parsed,
                     "fields": [
@@ -257,13 +252,13 @@ def lambda_handler(event, context):
                     "auto_generate_synonyms_phrase_query": "false",
                     "fuzzy_transpositions": "true",
                 }
-            })
+            }
 
-        # REMOVE top-level Geoname term from should: let function_score handle boosts
-        # Only add Streets/Intersections types minimally
-        should_clauses.append({"term": {"type": {"value": "ca.gc.nrcan.geoloc.data.model.Geoname", "boost": 1.05}}})
-        should_clauses.append({"term": {"type": {"value": "ca.gc.nrcan.geoloc.data.model.Street", "boost": 1.05}}})
-        should_clauses.append({"term": {"type": {"value": "ca.gc.nrcan.geoloc.data.model.Intersection", "boost": 1.045}}})
+        should_clauses = [
+            {"term": {"type": {"value": "ca.gc.nrcan.geoloc.data.model.Geoname", "boost": 1.05}}},
+            {"term": {"type": {"value": "ca.gc.nrcan.geoloc.data.model.Street", "boost": 1.05}}},
+            {"term": {"type": {"value": "ca.gc.nrcan.geoloc.data.model.Intersection", "boost": 1.045}}},
+        ]
 
         query = {
             "size": 25,
@@ -271,8 +266,8 @@ def lambda_handler(event, context):
                 "function_score": {
                     "query": {
                         "bool": {
-                            "should": should_clauses,
-                            "minimum_should_match": 1
+                            "must": [match_clause],
+                            "should": should_clauses
                         }
                     },
                     "functions": [
